@@ -24,7 +24,7 @@ Open `index.html` in a modern browser, or publish this repository with GitHub Pa
 
 ## Publish to GitHub Pages
 
-The included `.github/workflows/pages.yml` deploys the repository root to GitHub Pages when changes are pushed to `main`. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**.
+In repository settings, open **Pages → Build and deployment**. Select **Deploy from a branch**, choose `main` and `/(root)`, then save. GitHub will publish the static site automatically after each push.
 
 ## License
 
