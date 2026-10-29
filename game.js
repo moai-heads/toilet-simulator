@@ -35,9 +35,9 @@
     'You can’t spell “career” without “rear”.',
     'Today’s forecast: scattered plops, with a chance of glory.'
   ];
-  const defaultState = () => ({version:1, day:1, phase:'shop', cash:100, health:100, totalMovements:0, successfulMovements:0, totalEarned:0, bestScore:0, cleanStreak:0, achievements:[], sound:false, avatar:{pronouns:'masc',skin:skinColors[1],hair:hairColors[0]}, cart:{}, daily:null});
+  const defaultState = () => ({version:2, day:1, phase:'shop', cash:100, health:100, totalMovements:0, successfulMovements:0, totalEarned:0, bestScore:0, cleanStreak:0, achievements:[], sound:true, avatar:{pronouns:'masc',skin:skinColors[1],hair:hairColors[0]}, cart:{}, daily:null});
   let state = loadState();
-  let raf = 0, lastFrame = 0, needlePos = 7, needleDirection = 1, toastTimer = 0, audioCtx = null;
+  let raf = 0, lastFrame = 0, needlePos = 7, needleDirection = 1, toastTimer = 0, outcomeTimer = 0, audioCtx = null;
 
   const $ = sel => document.querySelector(sel);
   const cashValue=$('#cash-value'), healthValue=$('#health-value'), dayValue=$('#day-value'), careerCount=$('#career-count');
@@ -48,9 +48,11 @@
   function loadState(){
     try {
       const saved=JSON.parse(localStorage.getItem(SAVE_KEY));
-      if(!saved||saved.version!==1) return defaultState();
+      if(!saved||![1,2].includes(saved.version)) return defaultState();
       const fresh=defaultState();
       const merged={...fresh,...saved,avatar:{...fresh.avatar,...saved.avatar},cart:saved.cart||{},achievements:Array.isArray(saved.achievements)?saved.achievements:[]};
+      if(saved.version===1) merged.sound=true;
+      merged.version=2;
       if(!['shop','toilet','results'].includes(merged.phase)) merged.phase='shop';
       merged.cash=Math.max(0,Number(merged.cash)||0); merged.health=clamp(Number(merged.health)||100,1,100);
       return merged;
@@ -112,6 +114,7 @@
     sceneWrap.classList.toggle('active-toilet',active);sceneWrap.classList.toggle('tripping',psych);
     avatar.classList.remove('avatar-idle','avatar-straining','avatar-tripping');avatar.classList.add(active?(psych?'avatar-tripping':'avatar-straining'):'avatar-idle');
     const d=state.daily||{}, foodName=(d.foodNames||[])[0];
+    if(!active){sceneWrap.classList.remove('outcome-perfect','outcome-clean','outcome-near','outcome-miss');$('#outcome-burst').hidden=true;}
     if(active){
       if(psych){sceneQuote.textContent='“The tiles are singing. The needle is a tiny orange comet.”';sceneMood.textContent='MOOD: COSMIC'}
       else if(d.poisoned){sceneQuote.textContent='“My stomach just filed a formal complaint.”';sceneMood.textContent='MOOD: QUESTIONABLE'}
@@ -179,23 +182,45 @@
     raf=requestAnimationFrame(tickNeedle);
   }
   function push(){
-    if(state.phase!=='toilet')return;
+    if(state.phase!=='toilet'||state.daily.animating)return;
     const d=state.daily,half=d.targetWidth/2,distance=Math.abs(needlePos-d.target),excess=Math.max(0,distance-half);
     let grade=distance<=half?Math.round(100-(distance/half)*24):Math.round(clamp(67-excess*2.15,0,66));
     if(state.health<25)grade=Math.max(0,grade-8);
     d.pushes.push({pos:Math.round(needlePos),target:d.target,grade,hit:distance<=half});
-    playSound(grade>=70?'hit':'miss');
+    d.pushIndex++;d.animating=true;cancelAnimationFrame(raf);
+    const type=grade>=92?'perfect':grade>=70?'clean':grade>=45?'near':'miss';
+    const outcome={
+      perfect:['BULLSEYE!','Center hit. The porcelain applauds.','✨'],
+      clean:['A CLEAN HIT!','Right in the green. Tidy work.','💦'],
+      near:['CLOSE SHAVE!','The bowl wobbled. So did you.','😅'],
+      miss:['WAY OFF!','The toilet wins this round.','🫠']
+    }[type];
+    sceneWrap.classList.remove('outcome-perfect','outcome-clean','outcome-near','outcome-miss');
+    void sceneWrap.offsetWidth;sceneWrap.classList.add(`outcome-${type}`);
+    $('#outcome-title').textContent=outcome[0];$('#outcome-detail').textContent=outcome[1];$('#outcome-symbol').textContent=outcome[2];$('#outcome-points').textContent=`+${grade} PTS`;
+    $('#outcome-burst').hidden=false;
+    const button=$('#push-button');button.disabled=true;button.innerHTML='<span class="push-icon">✦</span><span>OUTCOME!</span><small>WATCH THE REPLAY</small>';
     const meter=$('#meter-wrap');meter.classList.remove('hit-flash','miss-flash');void meter.offsetWidth;meter.classList.add(grade>=70?'hit-flash':'miss-flash');
-    if(navigator.vibrate&&grade>=70)navigator.vibrate(14);
-    d.pushIndex++;
-    if(d.pushIndex>=3){finishDay();return}
-    d.target=rollTarget();d._meterReady=false;needlePos=needleDirection>0?7:93;
-    save();
-    $('#push-count').textContent=d.pushIndex+1;
+    $('#push-count').textContent=Math.min(d.pushIndex+1,3);
     $('#push-dots').innerHTML=Array.from({length:3},(_,i)=>`<i class="${i<d.pushIndex?'done':i===d.pushIndex?'current':''}"></i>`).join('');
-    targetZone.style.left=`${d.target-d.targetWidth/2}%`;targetZone.style.width=`${d.targetWidth}%`;
-    const instruction=$('#qte-instruction');instruction.textContent=grade>=85?'Beautiful timing! Keep that energy.':grade>=60?'A near-perfect push. Stay focused.':'Oof. Reset your focus for the next one.';
-    $('#meter-wrap').setAttribute('aria-label',`Push ${d.pushIndex+1} of 3 timing meter`);
+    $('#meter-wrap').setAttribute('aria-label',`Push ${d.pushIndex} result: ${grade} points`);
+    $('#qte-instruction').textContent=outcome[1];
+    playOutcomeSound(type);
+    if(navigator.vibrate)navigator.vibrate(type==='perfect'?[18,35,25]:type==='miss'?80:22);
+    clearTimeout(outcomeTimer);
+    outcomeTimer=setTimeout(()=>{
+      if(state.phase!=='toilet')return;
+      d.animating=false;sceneWrap.classList.remove(`outcome-${type}`);$('#outcome-burst').hidden=true;
+      if(d.pushIndex>=3){button.disabled=false;finishDay();return}
+      d.target=rollTarget();d._meterReady=false;needlePos=needleDirection>0?7:93;
+      targetZone.style.left=`${d.target-d.targetWidth/2}%`;targetZone.style.width=`${d.targetWidth}%`;
+      $('#push-count').textContent=d.pushIndex+1;
+      $('#push-dots').innerHTML=Array.from({length:3},(_,i)=>`<i class="${i<d.pushIndex?'done':i===d.pushIndex?'current':''}"></i>`).join('');
+      $('#qte-instruction').textContent=d.psychedelic?'The window is doing its best. So are you.':'Stop the needle in the sweet spot.';
+      $('#meter-wrap').setAttribute('aria-label',`Push ${d.pushIndex+1} of 3 timing meter`);
+      button.disabled=false;button.innerHTML='<span class="push-icon">⬇</span><span>HIT IT!</span><small>SPACE / TAP</small>';
+      save();startNeedle();
+    },1150);
   }
   function finishDay(){
     cancelAnimationFrame(raf);
@@ -232,6 +257,31 @@
       gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.09,now+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+dur);osc.start(now);osc.stop(now+dur+.02);
     }catch{}
   }
+  function playOutcomeSound(kind){
+    if(!state.sound)return;
+    try{
+      audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
+      if(audioCtx.state==='suspended')audioCtx.resume();
+      const ctx=audioCtx,now=ctx.currentTime;
+      const tone=(from,to,duration,wave='sine',volume=.09,delay=0)=>{
+        const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type=wave;osc.frequency.setValueAtTime(from,now+delay);
+        if(to!==from)osc.frequency.exponentialRampToValueAtTime(Math.max(1,to),now+delay+duration);
+        gain.gain.setValueAtTime(.0001,now+delay);gain.gain.exponentialRampToValueAtTime(volume,now+delay+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+delay+duration);
+        osc.connect(gain);gain.connect(ctx.destination);osc.start(now+delay);osc.stop(now+delay+duration+.025);
+      };
+      const splash=(duration=.1,volume=.035,delay=0,cutoff=1000)=>{
+        const length=Math.ceil(ctx.sampleRate*duration),buffer=ctx.createBuffer(1,length,ctx.sampleRate),data=buffer.getChannelData(0);
+        for(let i=0;i<length;i++)data[i]=(Math.random()*2-1)*(1-i/length);
+        const src=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();src.buffer=buffer;filter.type='lowpass';filter.frequency.value=cutoff;
+        gain.gain.setValueAtTime(volume,now+delay);gain.gain.exponentialRampToValueAtTime(.0001,now+delay+duration);src.connect(filter);filter.connect(gain);gain.connect(ctx.destination);src.start(now+delay);
+      };
+      if(kind==='perfect'){tone(205,62,.18,'sine',.12);splash(.13,.055,.015,850);tone(650,1040,.16,'sine',.055,.13);tone(920,920,.11,'sine',.035,.28)}
+      else if(kind==='clean'){tone(360,155,.15,'sine',.1);splash(.11,.05,.025,1300);tone(690,510,.12,'sine',.035,.12)}
+      else if(kind==='near'){tone(330,205,.22,'triangle',.085);splash(.08,.025,.035,650);tone(250,220,.12,'sine',.025,.2)}
+      else {tone(205,92,.34,'triangle',.1);tone(147,103,.28,'sawtooth',.025,.06)}
+    }catch{}
+  }
+
   function renderStats(){
     $('#career-stats').innerHTML=[['MOVEMENTS',state.totalMovements],['SUCCESSFUL',state.successfulMovements],['BEST SCORE',state.bestScore],['TOTAL EARNED',money(state.totalEarned)],['CURRENT WALLET',money(state.cash)],['HEALTH',`${state.health}/100`]].map(([label,val])=>`<div class="career-stat"><small>${label}</small><strong>${val}</strong></div>`).join('');
     $('#achievement-grid').innerHTML=achievements.map(a=>`<div class="achievement-item ${state.achievements.includes(a.id)?'unlocked':''}"><span class="achievement-icon">${a.icon}</span><span><b>${a.name}</b><small>${a.desc}</small></span></div>`).join('');
@@ -257,7 +307,7 @@
   $('#hair-swatches').addEventListener('click',e=>{const b=e.target.closest('[data-color]');if(!b)return;state.avatar.hair=b.dataset.color;save();renderCustomization()});
   $('#stats-open').addEventListener('click',()=>{renderStats();$('#stats-dialog').showModal()});
   $('#reset-open').addEventListener('click',()=>$('#reset-dialog').showModal());$('#reset-cancel').addEventListener('click',()=>$('#reset-dialog').close());
-  $('#reset-confirm').addEventListener('click',()=>{localStorage.removeItem(SAVE_KEY);state=defaultState();$('#reset-dialog').close();save();render();showToast('A fresh career. May your aim be true.')});
+  $('#reset-confirm').addEventListener('click',()=>{clearTimeout(outcomeTimer);cancelAnimationFrame(raf);localStorage.removeItem(SAVE_KEY);state=defaultState();$('#reset-dialog').close();save();render();showToast('A fresh career. May your aim be true.')});
   document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close()}));
   render();
   if(state.phase==='toilet'){

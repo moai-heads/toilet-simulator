@@ -20,7 +20,7 @@ Open `index.html` in a modern browser, or publish this repository with GitHub Pa
 - Animated, original SVG bathroom scene; psychedelic color effects; responsive layout and large touchscreen controls.
 - Persistent wallet, health, daily phase, avatar, career stats, and unlockable achievements.
 - Keyboard controls, semantic buttons, reduced-motion support, and no account or tracking.
-- Soundtrack is played through YouTube's official embedded player; the video remains visible while playing. Sound effects are synthesized locally with Web Audio.
+- Soundtrack is played through YouTube's official embedded player; the video remains visible while playing. Per-push scene reactions and comic sound effects are synthesized locally with Web Audio; audio is on by default and can be muted.
 
 ## Publish to GitHub Pages
 
