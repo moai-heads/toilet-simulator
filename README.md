@@ -1,31 +1,30 @@
 # Toilet Simulator
 
-A self-contained, mobile-friendly browser game about making questionable menu choices, timing three bathroom quick-time events, and trying to turn a shift on the porcelain throne into a living.
+A ridiculous bathroom economy game drawn and played entirely on a responsive HTML canvas. Choose questionable food, time three pushes, watch the porcelain react, and try to make a living.
 
 ## Play
 
-Open `index.html` in a modern browser, or publish this repository with GitHub Pages. No build step, framework, account, or server is required. Game progress is saved locally in the browser with `localStorage`.
+Open `index.html` in a modern browser, or use the GitHub Pages build. No framework, build step, account, or game server is required. Progress is saved locally with `localStorage`.
 
-### Controls
-
-- Choose up to four servings from the market; each item costs money immediately. Remove an item before starting to get its cost back.
-- Press **TAKE A SEAT** (or skip the meal) to begin the day's shift.
-- Stop the moving needle in the green zone three times using **HIT IT!**, **Space**, or **Enter**.
-- Collect your pay and start the next day. Food changes the timing window, needle speed, poison odds, health, score potential, and payout.
-- Customize your avatar, toggle sound effects, or listen to the linked YouTube soundtrack from the top bar.
+- Tap/click food cards to buy up to four servings. Tap `−` to return a serving and get its cost back.
+- Press **TAKE A SEAT** (or skip an empty meal) to start the day's shift.
+- Tap **HIT IT!**, press **Space**, or press **Enter** to stop the moving needle in the green zone three times. Each push gets a custom animated reaction and synthesized sound effect.
+- Collect your pay, then start the next day. Food changes the timing window, needle speed, poison odds, health, score potential, volume, consistency, and payout.
+- Swipe/scroll the market list on mobile. Use the in-canvas character and achievement icons to customize your avatar and inspect progress.
+- Sound effects are on by default; tap the speaker icon to mute. The music note opens the linked track in YouTube's visible embedded player.
 
 ## Features
 
-- 10 food and drink choices with spice, fiber, diuretic, stimulant, taste, and food-poisoning attributes.
-- Animated, original SVG bathroom scene; psychedelic color effects; responsive layout and large touchscreen controls.
-- Persistent wallet, health, daily phase, avatar, career stats, and unlockable achievements.
-- Keyboard controls, semantic buttons, reduced-motion support, and no account or tracking.
-- Soundtrack is played through YouTube's official embedded player; the video remains visible while playing. Per-push scene reactions and comic sound effects are synthesized locally with Web Audio; audio is on by default and can be muted.
+- Ten food and drink choices with spice, fiber, diuretic, stimulant, taste, and food-poisoning attributes.
+- Custom canvas-rendered bathroom scene, animated character, per-push outcomes, psychedelic effects, and responsive touch controls.
+- Persistent wallet, health, daily phase, avatar, stats, and eight unlockable achievements.
+- Keyboard QTE controls, reduced-motion-aware canvas presentation, no account, and no tracking.
+- Original comic sound effects synthesized locally with Web Audio. The optional YouTube soundtrack is streamed, not bundled.
 
-## Publish to GitHub Pages
+## GitHub Pages
 
-In repository settings, open **Pages → Build and deployment**. Select **Deploy from a branch**, choose `main` and `/(root)`, then save. GitHub will publish the static site automatically after each push.
+The repository is published from the `main` branch root using GitHub Pages. To recreate the deployment, select **Settings → Pages → Deploy from a branch → `main` → `/(root)**.
 
 ## License
 
-Game code and original vector artwork: MIT License. The embedded soundtrack remains the property of its creator and is streamed from YouTube; it is not bundled with this project.
+Game code and original canvas artwork: MIT License. The optional embedded soundtrack remains the property of its creator and is served by YouTube.
